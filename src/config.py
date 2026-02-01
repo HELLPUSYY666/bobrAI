@@ -30,6 +30,9 @@ class Settings(BaseSettings):
             f"postgresql+asyncpg://{self.postgres_user}:{self.postgres_password}"
             f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
         )
+    @property
+    def sync_db_url(self) -> str:
+        return self.database_url.replace('asyncpg', 'psycopg2')
     
     @property
     def rabbitmq_url(self) -> str:
