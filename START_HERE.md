@@ -43,6 +43,11 @@ The system is:
 ```bash
 docker-compose run --rm api pytest -v
 
+docker compose exec api pytest -v
+
+docker compose exec api bash
+pytest -v
+
 python test_api.py
 
 # Manual test

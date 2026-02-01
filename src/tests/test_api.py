@@ -1,14 +1,17 @@
 import pytest
-from httpx import AsyncClient
+from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
-
+import pytest_asyncio
 from src.main import app
 from src.db.models import Base
 from src.db.database import get_db
-
+import src.views.routes as routes_module
 
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
+class FakeRabbitMQClient:
+    async def publish_task(self, task_id: int, payload: str) -> None:
+        return None
 
 test_engine = create_async_engine(TEST_DATABASE_URL, echo=False)
 TestSessionLocal = sessionmaker(
@@ -21,18 +24,31 @@ async def override_get_db():
         yield session
 
 
-@pytest.fixture
-async def client():
+
+@pytest_asyncio.fixture
+async def client(monkeypatch):
     async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-    
+
     app.dependency_overrides[get_db] = override_get_db
-    
-    async with AsyncClient(app=app, base_url="http://test") as ac:
+
+    monkeypatch.setattr(
+        routes_module,
+        "rabbitmq_client",
+        FakeRabbitMQClient(),
+    )
+
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
-    
+
+    app.dependency_overrides.clear()
+
     async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
+
+
 
 
 @pytest.mark.asyncio
