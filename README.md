@@ -1,6 +1,5 @@
 # bobrAI
 ```bash
-git clone <repository-url>
 cd bobrAI
 
 docker-compose up --build
